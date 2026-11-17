@@ -1,58 +1,56 @@
 
-import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import {useAddTodoMutation,useDeleteTodoMutation, useEditTodoMutation,useGetTodosQuery} from './todoApi'
+import { useEffect, useState } from "react";
+import { useTodoStore } from "./store";
 
 const App = () => {
-  const { data, isLoading } = useGetTodosQuery()
-  const [addTodo] = useAddTodoMutation()
-  const [editTodo] = useEditTodoMutation()
-  const [deleteTodo] = useDeleteTodoMutation()
-  const [editId, setEditId] = useState(null)
-  const { register, handleSubmit, reset } = useForm()
+  const {todos,loading,getTodos,addTodo,editTodo,deleteTodo,} = useTodoStore();
 
-  const onSubmit = (e) => {
-    const formData = new FormData()
-    formData.append('Name', e.name)
-    formData.append('Description', e.description)
-    Array.from(e.images || []).forEach((img) =>formData.append('Images', img))
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState([]);
+  const [editId, setEditId] = useState(null);
 
-    editId? editTodo({id: editId,name: e.name,description: e.description}): addTodo(formData)
-    reset()
-    setEditId(null)
-  }
+  useEffect(() => {
+    getTodos();
+  }, []);
 
-  const handleEdit = (e) => {
-    setEditId(e.id)
-    reset({name: e.name,description: e.description})
-  }
+  const handleSubmit = async () => {
+    const formData = new FormData();
+    formData.append("Name", name);
+    formData.append("Description", description);
+    Array.from(images).forEach((img) => {
+      formData.append("Images", img);
+    });
 
-  const handleDelete = (id) => {
-    deleteTodo(id)
-  }
+    await (editId? editTodo({ id: editId, name, description }): addTodo(formData));
+    setName("");
+    setDescription("");
+    setImages([]);
+    setEditId(null);
+  };
 
-  if (isLoading) return <h2>Loading...</h2>
   return (
     <div>
-      <h1>My Todos</h1>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <input type="text"placeholder="name"{...register('name', { required: true })}/>
-        <input type="text"placeholder="description"{...register('description', { required: true })}/>
-        <input type="file" multiple {...register('images', { required: true })}/>
-        <button type="submit">{editId ? "Edit" : "Add"}</button>
-      </form>
-      {data?.data?.map((todo) => (
+      <h1>My Todos - Zustand</h1>
+      <input value={name}onChange={(e) => setName(e.target.value)}placeholder="Name"/>
+      <input value={description} onChange={(e) => setDescription(e.target.value)}placeholder="Description"/>
+      <input type="file" multiple onChange={(e) => setImages(e.target.files)}/>
+      <button onClick={handleSubmit}>{editId ? "Edit" : "Add"}</button>
+
+      {loading && <h3>Loading...</h3>}
+      {todos?.map((todo) => (
         <div key={todo.id}>
           <h3>{todo.name}</h3>
           <p>{todo.description}</p>
           {todo.images?.map((img) => (
-            <img key={img.id} src={`https://to-dos-api.softclub.tj/images/${img.imageName}`}width="100"alt="todo"/>
+            <img key={img.id}src={`https://to-dos-api.softclub.tj/images/${img.imageName}`}width="100"alt="todo"/>
           ))}
-          <button onClick={() => handleEdit(todo)}>Edit</button>
-          <button onClick={() => handleDelete(todo.id)}>Delete</button>
+
+          <button onClick={() => {setEditId(todo.id);setName(todo.name);setDescription(todo.description);}}>Edit</button>
+          <button onClick={() => deleteTodo(todo.id)}>Delete</button>
         </div>
       ))}
     </div>
-  )
-}
-export default App
+  );
+};
+export default App;
