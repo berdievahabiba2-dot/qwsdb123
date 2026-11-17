@@ -1,36 +1,33 @@
 
-import { create } from "zustand";
+import { atom } from "jotai";
 import axios from "axios";
 
 const api = axios.create({baseURL: "https://to-dos-api.softclub.tj/api/",});
 
-export const useTodoStore = create((set, get) => ({
-  todos: [],
-  loading: false,
+export const todosAtom = atom([]);
+export const loadingAtom = atom(false);
 
-  getTodos: async () => {
-    set({ loading: true });
+export const getTodosAtom = atom(null, async (get, set) => {
+  set(loadingAtom, true);
+  const { data } = await api.get("to-dos");
+  set(todosAtom, data.data);
+  set(loadingAtom, false);
+});
 
-    const { data } = await api.get("to-dos");
+export const addTodoAtom = atom(null, async (get, set, formData) => {
+  await api.post("to-dos", formData);
+  const { data } = await api.get("to-dos");
+  set(todosAtom, data.data);
+});
 
-    set({
-      todos: data.data,
-      loading: false,
-    });
-  },
+export const editTodoAtom = atom(null, async (get, set, todo) => {
+  await api.put("to-dos", todo);
+  const { data } = await api.get("to-dos");
+  set(todosAtom, data.data);
+});
 
-  addTodo: async (formData) => {
-    await api.post("to-dos", formData);
-    get().getTodos();
-  },
-
-  editTodo: async (todo) => {
-    await api.put("to-dos", todo);
-    get().getTodos();
-  },
-
-  deleteTodo: async (id) => {
-    await api.delete(`to-dos?id=${id}`);
-    get().getTodos();
-  },
-}));
+export const deleteTodoAtom = atom(null, async (get, set, id) => {
+  await api.delete(`to-dos?id=${id}`);
+  const { data } = await api.get("to-dos");
+  set(todosAtom, data.data);
+});
